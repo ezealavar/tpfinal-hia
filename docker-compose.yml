@@ -1,14 +1,4 @@
 services:
-  db:
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: adminpassword
-      POSTGRES_DB: turnos
-    ports:
-      - 5432:5432
-
   frontend:
     image: node:22.11.0
     tty: true
@@ -17,6 +7,8 @@ services:
     volumes:
       - "./frontend:/var/www"
     working_dir: /var/www
+    networks:
+      - clusternet
 
   backend:
     image: node:22.11.0
@@ -26,3 +18,102 @@ services:
     volumes:
       - "./backend:/var/www"
     working_dir: /var/www
+    networks:
+      - clusternet
+
+  pgpool:
+    image: bitnami/pgpool:latest  # Use the latest official image
+    container_name: pgpool
+    restart: unless-stopped
+    ports:
+      - 5432:5432  # Map container port 5432 to host port 5432
+    environment:
+      PGPOOL_BACKEND_NODES: "0:pg-0:5432,1:pg-1:5432"  # Define backend nodes
+      PGPOOL_SR_CHECK_USER: customuser
+      PGPOOL_SR_CHECK_PASSWORD: custompassword
+      PGPOOL_ENABLE_LDAP: no
+      PGPOOL_POSTGRES_USERNAME: postgres
+      PGPOOL_POSTGRES_PASSWORD: adminpassword
+      PGPOOL_ADMIN_USERNAME: admin
+      PGPOOL_ADMIN_PASSWORD: adminpassword
+    networks:
+      - clusternet  # Connect to the cluster network
+
+  pg-0:
+    image: bitnami/postgresql-repmgr:latest
+    container_name: pg-0
+    restart: unless-stopped
+    environment:
+      REPMGR_PARTNER_NODES: pg-0,pg-1
+      REPMGR_NODE_NAME: pg-0
+      REPMGR_NODE_NETWORK_NAME: pg-0
+      REPMGR_PRIMARY_HOST: pg-0
+      REPMGR_PASSWORD: repmgrpass
+      POSTGRESQL_POSTGRES_PASSWORD: adminpassword
+      POSTGRESQL_USERNAME: customuser
+      POSTGRESQL_PASSWORD: custompassword
+      POSTGRESQL_DATABASE: customdatabase
+      POSTGRESQL_CONF_FILE: "/bitnami/postgresql/conf/postgresql.conf"  # Ruta corregida
+    networks:
+      - clusternet
+    volumes:
+      - pg-0-data:/bitnami/postgresql
+
+  exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:latest
+    container_name: exporter
+    restart: unless-stopped
+    ports:
+      - 9187:9187  # Map container port 9187 to host port 9187
+    environment:
+      DATA_SOURCE_URI: "pgpool:5432/postgres?sslmode=disable"
+      DATA_SOURCE_USER: postgres
+      DATA_SOURCE_PASS: adminpassword
+    networks:
+      - clusternet  # Connect to the cluster network
+
+  prometheus:
+    image: bitnami/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - C:/Users/USUARIO/pgpool/prometheus.yml:/opt/bitnami/prometheus/conf/prometheus.yml:ro
+    networks:
+      - clusternet  # Connect to the cluster network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-cluster
+    restart: unless-stopped
+    ports:
+      - 3000:3000  # Map container port 3000 to host port 3000
+    networks:
+      - clusternet  # Connect to the cluster network
+    volumes:
+      - grafana-storage:/var/lib/grafana  # Persist Grafana data  
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: clienteBD
+    restart: unless-stopped
+    ports:
+      - 5050:80  # Map container port 80 to host port 5050
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@gmail.com"
+      PGADMIN_DEFAULT_PASSWORD: "adminpassword"
+    networks:
+      - clusternet  # Connect to the cluster network
+    volumes:
+      - C:/Users/USUARIO/pgpool/servers.json:/pgadmin4/servers.json:ro
+
+networks:
+  clusternet:
+    driver: bridge
+
+volumes:
+  pg-0-data:  # Define a volume for PostgreSQL data
+    driver: local
+  pg-1-data:  # Define a volume for PostgreSQL data
+    driver: local
+  grafana-storage:  # Define a volume for Grafana data
+    driver: local
