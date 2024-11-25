@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { UsersService } from '../../services/users.service';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-users',
@@ -13,15 +14,15 @@ export class UsersComponent {
   usuarios: any[] = [];
 
   constructor (
-    private usersService: UsersService
+    private usersService: UsersService,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
     this.getUsuarios();
   }
 
-  getUsuarios(): void
-  {
+  getUsuarios(): void {
     this.usersService.getUsuarios().subscribe(
       result => {
         console.log(result)
@@ -29,4 +30,12 @@ export class UsersComponent {
       }
     )
   }
+
+  // registrarAlquiler() {
+  //   this.router.navigate('/formulario');
+  // }
+
+  // modificarAlquiler(alquilerId: string) {
+  //   this.router.navigate('formulario', alquilerId);
+  // }
 }

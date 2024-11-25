@@ -1,12 +1,22 @@
-<div>
-  <h1>Mis usuarios</h1>
+  <!-- Tabla de usuarios -->
   <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Email</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
     <tbody>
       <tr *ngFor="let usuario of usuarios">
         <td>{{ usuario.id }}</td>
         <td>{{ usuario.nombre }}</td>
         <td>{{ usuario.email }}</td>
+        <td>
+          <!-- <button (click)="actualizarUsuario(usuario)">Editar</button>
+          <button (click)="eliminarUsuario(usuario.id)">Eliminar</button> -->
+        </td>
       </tr>
     </tbody>
   </table>
-</div>
